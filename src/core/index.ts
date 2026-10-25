@@ -1029,15 +1029,26 @@ var coreAttemptCounters: {
     nativeFallbacks: number;
     streamRetries: number;
 };
+function reportCorePerformance(key?: string): void {
+    try {
+        var sink = (window as any).__ottPerfSink;
+        if (sink) {
+            if (key) sink.recovery(key);
+            else sink.changed();
+        }
+    } catch (_) {}
+}
 function countCoreAttempt(
     session: number,
     key: keyof typeof coreAttemptCounters
 ): void {
-    if (session === _playSession)
+    if (session === _playSession) {
         coreAttemptCounters[key] = Math.min(
             9007199254740991,
             coreAttemptCounters[key] + 1
         );
+        reportCorePerformance(key);
+    }
 }
 function cancelCoreStreamAttempt(): void {
     if (coreStreamAttempt) coreStreamAttempt.dispose();
@@ -1555,6 +1566,7 @@ function startCorePlayback(
             hlsConfig.manifestLoadingMaxRetry = 1;
         }
         hlsInstance = new Hls(coreHlsConfig(hlsConfig, originalUrl));
+        reportCorePerformance();
         var playbackHls = hlsInstance;
         var bitrateMeter = createCoreHlsBitrateMeter();
         _coreHlsBitrate = bitrateMeter;
@@ -2571,6 +2583,7 @@ function startCorePipEngine(url: string, engineLoaded = false): void {
             )
         );
         hlsPipInstance = pipHls;
+        reportCorePerformance();
         pipHls.on(Hls.Events.MANIFEST_PARSED, function () {
             if (session === _corePipSession && hlsPipInstance === pipHls)
                 playCoreMedia(videoPip!);
@@ -3592,6 +3605,11 @@ function openCoreEngineLease(
                 return "shaka";
             return (pip ? corePipNativeAttached : coreNativeAttached)
                 ? "html5"
+                : null;
+        },
+        diagnosticMedia: function () {
+            return active() && media
+                ? { hls: pip ? hlsPipInstance : hlsInstance, media: media }
                 : null;
         },
         dispose: function () {
