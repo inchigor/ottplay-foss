@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add explicitly selected version 3 HLS diagnostics for initial/current buffer
+  policy, observed cap changes, error-action metadata and fragment/part flags.
+  Distinguish mutable statistics from network retries, keep unavailable causes
+  unknown, and preserve existing capture versions and collection limits.
 - Avoid rebuilding unchanged video resolution and bitrate text each second or
   while the footer is hidden. Refresh it immediately when the footer opens,
   while keeping bitrate sampling and playback status active.

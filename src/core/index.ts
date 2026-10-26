@@ -30,7 +30,10 @@ import {
 } from "../storage/index";
 import { listPreviewRect } from "../utils/helpers";
 import { watchAutoNativePlayback } from "./auto-playback";
-import { coreBufferPolicy } from "./buffer-policy";
+import {
+    coreBufferPolicy,
+    snapshotInitialHlsBufferPolicy,
+} from "./buffer-policy";
 import { createNativeHlsTransport, isNativeHlsUrl } from "./native-hls";
 
 /** Reference to the primary <video> DOM element. */
@@ -185,6 +188,7 @@ export var strLANG = "SHIFT";
 
 /** Active hls.js instance for the main video!. */
 var hlsInstance: any = null;
+var initialHlsBufferPolicy: any = null;
 // True only after this core attached a native source to the owned element.
 var coreNativeAttached = false;
 var corePipNativeAttached = false;
@@ -397,6 +401,7 @@ export function clearPlayTimeInterval(): void {
 }
 /** Active hls.js instance for the PiP video!. */
 var hlsPipInstance: any = null;
+var initialPipHlsBufferPolicy: any = null;
 var _corePipSession = 0;
 var _corePipAutoCancel: ((restoreNative?: boolean) => void) | null = null;
 /** Whether the player is currently in fullscreen mode. */
@@ -1255,6 +1260,7 @@ function startCoreEngine(
     if (hlsInstance) {
         hlsInstance.destroy();
         hlsInstance = null;
+        initialHlsBufferPolicy = null;
     }
     cancelCoreSeek();
     destroyCoreShaka();
@@ -1373,6 +1379,7 @@ function startCoreEngine(
                   if (hlsInstance) {
                       hlsInstance.destroy();
                       hlsInstance = null;
+                      initialHlsBufferPolicy = null;
                   }
                   destroyCoreShaka();
                   if (video) {
@@ -1579,6 +1586,7 @@ function startCorePlayback(
             hlsConfig.manifestLoadingMaxRetry = 1;
         }
         hlsInstance = new Hls(coreHlsConfig(hlsConfig, originalUrl));
+        initialHlsBufferPolicy = snapshotInitialHlsBufferPolicy(hlsInstance);
         reportCorePerformance();
         var playbackHls = hlsInstance;
         var bitrateMeter = createCoreHlsBitrateMeter();
@@ -1611,6 +1619,7 @@ function startCorePlayback(
                     coreStreamFailure("auth", httpStatus);
                     hlsInstance.destroy();
                     hlsInstance = null;
+                    initialHlsBufferPolicy = null;
                     return;
                 }
                 if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
@@ -1681,6 +1690,7 @@ function startCorePlayback(
                                 : nativePosition;
                         hlsInstance.destroy();
                         hlsInstance = null;
+                        initialHlsBufferPolicy = null;
                         // Auto already tried native. Never loop back to the
                         // decoder that silently dropped this stream's video.
                         if (
@@ -1735,6 +1745,7 @@ function startCorePlayback(
                         );
                         hlsInstance.destroy();
                         hlsInstance = null;
+                        initialHlsBufferPolicy = null;
                     } else {
                         hlsInstance.startLoad(
                             _corePendingSeek || !hlsInstance.hasEnoughToStart
@@ -1746,6 +1757,7 @@ function startCorePlayback(
                     coreStreamFailure("decode");
                     hlsInstance.destroy();
                     hlsInstance = null;
+                    initialHlsBufferPolicy = null;
                 }
             }
         });
@@ -1754,6 +1766,7 @@ function startCorePlayback(
             if (streamPolicy && !streamPolicy.hls(playbackHls, limits)) {
                 playbackHls.destroy();
                 hlsInstance = null;
+                initialHlsBufferPolicy = null;
                 coreStreamFailure("quality");
                 return;
             }
@@ -2015,6 +2028,7 @@ function stopCoreEngine(): void {
     if (hlsInstance) {
         hlsInstance.destroy();
         hlsInstance = null;
+        initialHlsBufferPolicy = null;
     }
     // Removing src alone can leave the selected native resource buffering.
     // Reset it after detaching engines so Stop also aborts its network fetch.
@@ -2579,6 +2593,7 @@ function startCorePipEngine(url: string, engineLoaded = false): void {
     if (hlsPipInstance) {
         hlsPipInstance.destroy();
         hlsPipInstance = null;
+        initialPipHlsBufferPolicy = null;
     }
     var auto = playerMode === 3 && getDefaultPlayerMode() === 3;
     var canHls = typeof Hls !== "undefined" && Hls.isSupported();
@@ -2596,6 +2611,7 @@ function startCorePipEngine(url: string, engineLoaded = false): void {
             )
         );
         hlsPipInstance = pipHls;
+        initialPipHlsBufferPolicy = snapshotInitialHlsBufferPolicy(pipHls);
         reportCorePerformance();
         pipHls.on(Hls.Events.MANIFEST_PARSED, function () {
             if (session === _corePipSession && hlsPipInstance === pipHls)
@@ -2685,6 +2701,7 @@ function stopCorePipEngine(): void {
     if (hlsPipInstance) {
         hlsPipInstance.destroy();
         hlsPipInstance = null;
+        initialPipHlsBufferPolicy = null;
     }
     videoPip!.removeAttribute("src");
     try {
@@ -3621,9 +3638,17 @@ function openCoreEngineLease(
                 : null;
         },
         diagnosticMedia: function () {
-            return active() && media
-                ? { hls: pip ? hlsPipInstance : hlsInstance, media: media }
-                : null;
+            if (!active() || !media) return null;
+            var hls = pip ? hlsPipInstance : hlsInstance,
+                policy = pip
+                    ? initialPipHlsBufferPolicy
+                    : initialHlsBufferPolicy;
+            return {
+                hls: hls,
+                initialHlsBufferPolicy:
+                    hls && policy ? Object.assign({}, policy) : null,
+                media: media,
+            };
         },
         dispose: function () {
             listeners.forEach(function (listener) {
