@@ -2,8 +2,6 @@
 
 ## Unreleased
 
-- Fade notification icons together with the banner background while keeping
-  message text fully legible until the banner exits.
 
 - Avoid rebuilding unchanged video resolution and bitrate text each second or
   while the footer is hidden. Refresh it immediately when the footer opens,
@@ -102,6 +100,12 @@
 - Include tracks from selected Plex music libraries in the standard playlist.
 - Keep Local videos Up/Down mapped to previous/next file after finite-media detection, while respecting custom key mappings and open menus.
 - Resume the exact selected Local videos file at its saved playback position after Q, page closure, or native app exit. Capture the decoder clock before exit/stop; keep completed files and explicit channel changes starting at zero.
+
+## [1.1.61] - 2026-10-26
+
+- Fade notification icons together with the banner background while keeping
+  message text fully legible until the banner exits.
+- Use the primary Ubuntu package mirror for normalization test tools in CI.
 
 ## [1.1.60] - Development line
 
