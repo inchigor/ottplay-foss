@@ -26,7 +26,7 @@ RUN npm run typecheck && npm run build:server
 
 # Resolve the server workspace before the target compilation cache boundary.
 # Desktop release version changes must not invalidate unchanged server inputs.
-FROM --platform=$BUILDPLATFORM rust:1.99-alpine@sha256:557a94c82b485a14b569120e00867267108c734efe33f10cc31ca0cd5dd1eca9 AS server-inputs
+FROM --platform=$BUILDPLATFORM rust:1.99-alpine@sha256:b1d5dd5a22a09404d3e798c0cf051b689077360374eb505fa5bb93c479693d87 AS server-inputs
 RUN apk add --no-cache python3
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
@@ -38,7 +38,7 @@ RUN python3 scripts/prepare-container-workspace.py --workspace /app --output /pr
 # Build Rust server against musl so the published image does not need
 # GLIBC_2.38+ (Hub :latest built on a newer glibc toolchain failed on
 # Synology DSM Docker / x86_64). Alpine = musl host target by default.
-FROM rust:1.99-alpine@sha256:557a94c82b485a14b569120e00867267108c734efe33f10cc31ca0cd5dd1eca9 AS rust-build
+FROM rust:1.99-alpine@sha256:b1d5dd5a22a09404d3e798c0cf051b689077360374eb505fa5bb93c479693d87 AS rust-build
 RUN apk add --no-cache musl-dev build-base
 WORKDIR /app
 COPY --from=server-inputs /prepared/Cargo.toml /prepared/Cargo.lock ./
@@ -47,7 +47,7 @@ COPY src-rs ./src-rs
 RUN cargo build --locked --release --bin ottplay-server
 
 # Musl runtime (no glibc). ca-certificates for outbound HTTPS (EPG / M3U).
-FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
 RUN apk add --no-cache ca-certificates \
  && adduser -D -H -u 65532 -g nonroot nonroot
 WORKDIR /app
