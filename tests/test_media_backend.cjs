@@ -318,13 +318,18 @@ function coreBridge(f, kind = "vod") {
         .filter(
             (node) =>
                 ts.isFunctionDeclaration(node) &&
-                ["getCoreMediaBackend", "stbStop", "stbIsStandby"].includes(
-                    node.name?.text
-                )
+                [
+                    "getCoreMediaBackend",
+                    "stbStop",
+                    "stbIsStandby",
+                    "configureLiveRecovery",
+                    "sampleCoreLiveRecovery",
+                ].includes(node.name?.text)
         )
         .map((node) => node.getText(source).replace(/^export /, ""))
         .join("\n");
     load(f.context, "src/playback/session.ts");
+    load(f.context, "src/playback/live-recovery.ts");
     const state = f.context.__ottPlaybackSession.createState(() => {});
     function select(nextKind = kind) {
         state.open({
@@ -372,6 +377,7 @@ function coreBridge(f, kind = "vod") {
         },
         _standby: false,
         clearInterval: f.ports.clearInterval,
+        coreLiveRecovery: null,
         coreMediaBackend: null,
         openCoreEngineLease: f.ports.open,
         setInterval: f.ports.setInterval,

@@ -63,8 +63,8 @@ try {
         Object.keys(CLASSIC_OPTIONAL_BUNDLES).sort()
     );
     assert.deepEqual(OPTIONAL_BUDGETS["subtitle-appearance"], {
-        bytes: 7800,
-        gzipBytes: 3300,
+        bytes: 8100,
+        gzipBytes: 3400,
     });
     assert.deepEqual(OPTIONAL_BUDGETS["remote-settings-extras"], {
         bytes: 7000,
@@ -184,7 +184,7 @@ try {
     );
     assert.throws(
         () => inspectBundleSets(root),
-        /legacy complete player bytes .* exceeds budget 1176800/,
+        /legacy complete player bytes .* exceeds budget 1182800/,
         "legacy payload cannot borrow unused optional-asset headroom"
     );
     fs.writeFileSync(oversizedSet, source);

@@ -1033,6 +1033,7 @@ interface CoreStreamAttempt {
     fail(kind: string, status?: number, position?: number): void;
     pause(): void;
     resume(): boolean;
+    state(): { pending: boolean; terminal: boolean };
 }
 var coreStreamAttempt: CoreStreamAttempt | null = null;
 // Retained for the whole engine lease: an internal retry must not erase history.
@@ -1192,6 +1193,9 @@ function createCoreStreamAttempt(
             if (!pending) return false;
             schedule();
             return true;
+        },
+        state: function () {
+            return { pending: pending, terminal: ended };
         },
     };
 }
@@ -3415,6 +3419,102 @@ if (typeof document !== "undefined" && document.body) {
 
 /** Modern browser engines are ports; the backend owns the request and observations. */
 var coreMediaBackend: any = null;
+var coreLiveRecovery: any = null;
+/** Called by committed settings effects; disabled mode creates no polling timer. */
+function configureLiveRecovery(): void {
+    if (!coreLiveRecovery) return;
+    if (coreLiveRecovery.detachUI) coreLiveRecovery.detachUI();
+    coreLiveRecovery.detachUI = null;
+    coreLiveRecovery.configure();
+    var w = window as any;
+    if (!(w.sLiveRecoveryAttempts > 0 && w.sLiveRecoveryAttempts <= 5)) return;
+    // Observe presentation only while enabled. Zero retains the original engine listeners.
+    var refresh = function () {
+        coreLiveRecovery.refresh();
+        if (w.__ottLiveRecoveryOSD)
+            w.__ottLiveRecoveryOSD.render(coreLiveRecovery.snapshot().status);
+    };
+    var unsubscribe = coreMediaBackend.subscribe(refresh);
+    var media = typeof video !== "undefined" ? video : null;
+    var events = [
+        "timeupdate",
+        "playing",
+        "pause",
+        "seeking",
+        "emptied",
+        "enterpictureinpicture",
+        "leavepictureinpicture",
+    ];
+    if (media && typeof media.addEventListener === "function")
+        events.forEach(function (name) {
+            media!.addEventListener(name, refresh);
+        });
+    if (
+        typeof document !== "undefined" &&
+        typeof document.addEventListener === "function"
+    )
+        document.addEventListener("visibilitychange", refresh);
+    coreLiveRecovery.detachUI = function () {
+        unsubscribe();
+        if (media && typeof media.removeEventListener === "function")
+            events.forEach(function (name) {
+                media!.removeEventListener(name, refresh);
+            });
+        if (
+            typeof document !== "undefined" &&
+            typeof document.removeEventListener === "function"
+        )
+            document.removeEventListener("visibilitychange", refresh);
+    };
+}
+(window as any).configureLiveRecovery = configureLiveRecovery;
+function sampleCoreLiveRecovery(): LiveRecoverySample | null {
+    var w = window as any;
+    var playback = w.__ottClassicPlayback;
+    var handle = coreMediaBackend.current();
+    if (
+        !playback ||
+        !handle ||
+        !handle.active() ||
+        !w.__ottCoreTransport ||
+        w.stbPlay !== w.__ottCoreTransport.play
+    )
+        return null;
+    var state = playback.snapshot();
+    if (
+        !state.target ||
+        state.target.kind !== "live" ||
+        state.phase === "stopped"
+    )
+        return null;
+    var media = video;
+    if (!media) return null;
+    var attempt = coreStreamAttempt && coreStreamAttempt.state();
+    return {
+        activity: JSON.stringify(coreAttemptCounters || {}),
+        blocked:
+            state.phase === "paused" ||
+            w.forcePlay === false ||
+            media.seeking ||
+            media.ended ||
+            (media.paused && handle.snapshot().phase !== "loading") ||
+            document.visibilityState === "hidden" ||
+            w.navigator.onLine === false ||
+            !!(w.__ottKiosk && w.__ottKiosk.enabled()) ||
+            !!(coreAvTest && coreAvTest.active()),
+        handleId: handle.id,
+        key: JSON.stringify([
+            state.target.sourceId,
+            state.target.channelId,
+            state.generation,
+        ]),
+        position: media.currentTime,
+        ready: !media.paused && media.readyState >= 2,
+        recovering: !!(attempt && attempt.pending),
+        terminal: !!(attempt && attempt.terminal),
+    };
+}
+
 var coreDeviceEffects: any = {};
 export function getCoreMediaBackend(): any {
     if (coreMediaBackend) return coreMediaBackend;
@@ -3482,6 +3582,33 @@ export function getCoreMediaBackend(): any {
             return setInterval(callback, delay);
         },
     });
+    coreLiveRecovery = (window as any).__ottLiveRecovery.create({
+        clearInterval: function (timer: any) {
+            clearInterval(timer);
+        },
+        now: function () {
+            return performance.now();
+        },
+        report: function (status: LiveRecoveryStatus) {
+            var osd = (window as any).__ottLiveRecoveryOSD;
+            if (osd) osd.render(status);
+        },
+        restart: function () {
+            return coreMediaBackend.restart();
+        },
+        sample: sampleCoreLiveRecovery,
+        setInterval: function (callback: () => void, delay: number) {
+            return setInterval(callback, delay);
+        },
+        settings: function () {
+            var w = window as any;
+            return {
+                attempts: w.sLiveRecoveryAttempts,
+                timeout: w.sLiveRecoveryTimeout,
+            };
+        },
+    });
+    configureLiveRecovery();
     return coreMediaBackend;
 }
 function openCoreEngineLease(

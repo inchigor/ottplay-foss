@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add opt-in recovery for a main live stream that stops advancing without a
+  fatal error: 0–5 attempts, 10/15/20/30-second deadlines and a countdown OSD.
+  Keep it disabled by default, preserve engine/kiosk recovery ownership and
+  exclude archive/VOD and intentional pause. The OSD yields playback-feedback
+  presentation without changing its deadlines or terminal decisions.
+
 - Avoid rebuilding unchanged video resolution and bitrate text each second or
   while the footer is hidden. Refresh it immediately when the footer opens,
   while keeping bitrate sampling and playback status active.
