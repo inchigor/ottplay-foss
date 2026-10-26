@@ -107,6 +107,17 @@
   message text fully legible until the banner exits.
 - Use the primary Ubuntu package mirror for normalization test tools in CI.
 
+### Upgrade
+
+- Install the official package for your platform, or reload the updated hosted
+  player. Existing profiles, playback settings and notification preferences are
+  preserved; the icon animation follows the existing banner timing.
+
+### Security
+
+- The package download checks, signature verification and player access controls
+  are unchanged. The CI mirror adjustment preserves Ubuntu package signatures.
+
 ## [1.1.60] - Development line
 
 ### Changes
