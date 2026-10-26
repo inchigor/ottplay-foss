@@ -101,8 +101,8 @@ try {
         gzipBytes: 1900,
     });
     assert.deepEqual(OPTIONAL_BUDGETS["perf-capture"], {
-        bytes: 20200,
-        gzipBytes: 7824,
+        bytes: 22200,
+        gzipBytes: 8528,
     });
     const providerFieldsPath = path.join(
         root,
@@ -110,7 +110,7 @@ try {
     );
     const crypto = require("node:crypto");
     const denseFields = Buffer.concat(
-        Array.from({ length: 256 }, (_, index) =>
+        Array.from({ length: 288 }, (_, index) =>
             crypto.createHash("sha256").update(String(index)).digest()
         )
     ).toString("base64");
@@ -127,7 +127,7 @@ try {
     fs.writeFileSync(perfPath, denseFields);
     assert.throws(
         () => inspectBundleSets(root),
-        /perf-capture\.js: gzipBytes .* exceeds budget 7824/
+        /perf-capture\.js: gzipBytes .* exceeds budget 8528/
     );
     fs.writeFileSync(perfPath, source);
     const extrasPath = path.join(root, "dist/remote-settings-extras.js");

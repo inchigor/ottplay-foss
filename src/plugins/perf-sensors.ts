@@ -312,12 +312,8 @@ function createPerformanceSensors(w: any, ports: any): any {
         if (!ports.hlsDetails || !owner || !owner.hls || !owner.sourceId)
             return;
         var config = field(owner.hls, "config"),
-            value: any = {};
+            value = policyValues(config, false);
         [
-            ["max_buffer_length_seconds", "maxBufferLength"],
-            ["max_max_buffer_length_seconds", "maxMaxBufferLength"],
-            ["max_buffer_size_bytes", "maxBufferSize"],
-            ["back_buffer_length_seconds", "backBufferLength"],
             ["max_buffer_hole_seconds", "maxBufferHole"],
             ["high_buffer_watchdog_period_seconds", "highBufferWatchdogPeriod"],
             ["nudge_offset_seconds", "nudgeOffset"],
@@ -329,7 +325,6 @@ function createPerformanceSensors(w: any, ports: any): any {
         ].forEach(function (pair) {
             var observed = field(config, pair[1]);
             value[pair[0]] =
-                pair[0] === "max_buffer_size_bytes" ||
                 pair[0] === "nudge_max_retry"
                     ? integer(observed)
                     : number(observed);

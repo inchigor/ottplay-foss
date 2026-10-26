@@ -545,7 +545,12 @@ const OPTIONAL_BUDGETS = Object.freeze({
     // Opt-in HLS v2 adds track ranges, PTS, passive live/config measurements and
     // version fencing. Node22.23.4 level9: 15638/6089 -> 18760/7076 raw/gzip.
     // Allocate its measured +3122/+987 with +3200/+1024; retain prior headroom.
-    "perf-capture": Object.freeze({ bytes: 20200, gzipBytes: 7824 }),
+    // Opt-in HLS v3 adds initial/current policy, observed error actions and
+    // fragment flags. After sharing config projection, TS5.9.3/Terser5.51.2
+    // on Node26.8.2 level9 measures 19400/7263 -> 21388/7942 raw/gzip.
+    // Allocate the measured +1988/+679 as +2000/+704, retaining prior headroom.
+    // Main and legacy-total limits remain unchanged; total counts this once.
+    "perf-capture": Object.freeze({ bytes: 22200, gzipBytes: 8528 }),
     // Provider scalar codecs and the paginated Plex folder collection reuse normal
     // save paths. Node22 development: provider fields15528/5460, settings20128/6781;
     // moving legacy Plex setup into the optional asset leaves legacy1175608/370795.
@@ -567,7 +572,9 @@ const OPTIONAL_BUDGETS = Object.freeze({
 });
 // Carry the approved 96-byte VOD checkpoint allowance into the complete
 // payload exactly once, alongside the independently bounded optional capture.
-const TOTAL_BUDGET = Object.freeze({ bytes: 1288100, gzipBytes: 410770 });
+// Include HLS v3's +2000/+704 optional allowance exactly once so this remains
+// the legacy-total budget plus the sum of all optional budgets, with no extra room.
+const TOTAL_BUDGET = Object.freeze({ bytes: 1290100, gzipBytes: 411474 });
 const ARTIFACTS = Object.freeze([
     "dist/player.js",
     "src-tauri/frontend/dist/player.js",
