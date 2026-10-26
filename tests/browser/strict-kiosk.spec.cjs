@@ -296,7 +296,8 @@ for (const provider of ["m3u", "vportal"]) {
             async function seekReadyBar() {
                 // currentTime changes before an HLS seek has decoded its target.
                 // Strict kiosk intentionally rejects gestures during that loading
-                // phase; wait for admission and use the settled footer geometry.
+                // phase. Bitrate can reset during a seek and its next sample adds
+                // a footer row; require admission and metadata in the same poll.
                 await expect
                     .poll(() =>
                         page.evaluate(() => {
@@ -305,12 +306,20 @@ for (const provider of ["m3u", "vportal"]) {
                                 !video.seeking &&
                                 video.readyState >= 2 &&
                                 typeof window.__ottKiosk.beginSeek() ===
-                                    "function"
+                                    "function" &&
+                                /Mbps/.test(
+                                    document.querySelector("#video_res")
+                                        .textContent
+                                )
                             );
                         })
                     )
                     .toBe(true);
-                const box = await page.locator("#progress_div").boundingBox();
+                const progress = await page
+                    .locator("#progress_div")
+                    .elementHandle();
+                await progress.waitForElementState("stable");
+                const box = await progress.boundingBox();
                 expect(box.height).toBeGreaterThanOrEqual(24);
                 return box;
             }

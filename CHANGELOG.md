@@ -7,6 +7,8 @@
   Keep it disabled by default, preserve engine/kiosk recovery ownership and
   exclude archive/VOD and intentional pause. The OSD yields playback-feedback
   presentation without changing its deadlines or terminal decisions.
+- Fade notification icons together with the banner background while keeping
+  message text fully legible until the banner exits.
 
 - Avoid rebuilding unchanged video resolution and bitrate text each second or
   while the footer is hidden. Refresh it immediately when the footer opens,
